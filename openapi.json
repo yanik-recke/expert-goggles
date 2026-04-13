@@ -1,0 +1,244 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Dependency Vulnerability Checker",
+    "description": "Parses dependency files (pom.xml, .gradle) and checks them against the OSV vulnerability database.",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Service is running"
+          }
+        }
+      }
+    },
+    "/parse": {
+      "post": {
+        "summary": "Parse dependencies from a build file",
+        "description": "Parses the content of a pom.xml or .gradle file and returns the list of dependencies found.",
+        "operationId": "parseDependencies",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dependencies parsed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Dependency"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unsupported file type",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Unsupported file type: requirements.txt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Failed to parse file content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/check": {
+      "post": {
+        "summary": "Parse dependencies and check for vulnerabilities",
+        "description": "Parses the content of a pom.xml or .gradle file, then checks all found dependencies against the OSV vulnerability database.",
+        "operationId": "checkVulnerabilities",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vulnerability check completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DependencyReport"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unsupported file type",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Unsupported file type: requirements.txt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Failed to parse file content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "OSV API request failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ParseRequest": {
+        "type": "object",
+        "required": ["content", "file_type"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The raw content of the build file"
+          },
+          "file_type": {
+            "type": "string",
+            "description": "Type of build file",
+            "enum": ["pom.xml", "maven", "gradle"]
+          }
+        }
+      },
+      "Dependency": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Dependency name in groupId:artifactId format",
+            "example": "org.apache.logging.log4j:log4j-core"
+          },
+          "version": {
+            "type": "string",
+            "description": "Dependency version",
+            "example": "2.14.1"
+          },
+          "ecosystem": {
+            "type": "string",
+            "description": "Package ecosystem (used for OSV lookups)",
+            "example": "Maven"
+          }
+        }
+      },
+      "DependencyReport": {
+        "type": "object",
+        "properties": {
+          "dependency": {
+            "$ref": "#/components/schemas/Dependency"
+          },
+          "vulnerabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Vulnerability"
+            }
+          }
+        }
+      },
+      "Vulnerability": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "OSV vulnerability identifier",
+            "example": "GHSA-jfh8-c2jp-5v3q"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short description of the vulnerability",
+            "example": "Remote code injection in Log4j"
+          },
+          "details": {
+            "type": "string",
+            "description": "Detailed description of the vulnerability"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alternative identifiers (e.g. CVE IDs)",
+            "example": ["CVE-2021-44228"]
+          },
+          "severity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Severity"
+            }
+          }
+        }
+      },
+      "Severity": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Severity scoring system",
+            "example": "CVSS_V3"
+          },
+          "score": {
+            "type": "string",
+            "description": "Severity score or vector string",
+            "example": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+          }
+        }
+      }
+    }
+  }
+}
