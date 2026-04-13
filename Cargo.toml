@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.102"
+axum = "0.8.8"
+regex = "1"
+roxmltree = "0.20"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1.51.1", features = ["rt-multi-thread", "macros"] }
+log = "0.4"
+env_logger = "0.11"
